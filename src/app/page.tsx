@@ -14,6 +14,7 @@ type Result = {
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -47,7 +48,12 @@ export default function Home() {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              setFile(f);
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(f ? URL.createObjectURL(f) : null);
+            }}
             className="block w-full border rounded p-2"
           />
           <button
@@ -59,13 +65,24 @@ export default function Home() {
           </button>
         </form>
 
+        {previewUrl && (
+          <div className="border rounded p-3">
+            <div className="text-sm mb-2 text-gray-600">Предпросмотр загруженного фото</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Загруженное фото" className="max-h-[360px] rounded" />
+          </div>
+        )}
+
         {error && (
           <div className="text-red-600 text-sm">Ошибка: {error}</div>
         )}
 
         {result && (
           <div className="space-y-4 border rounded p-4">
-            <div className="text-lg font-medium">{result.flower_name}</div>
+            <div className="text-xl font-semibold">{result.flower_name}</div>
+            {typeof result.confidence === "number" && (
+              <div className="text-sm text-gray-600">Уверенность: {(result.confidence * 100).toFixed(0)}%</div>
+            )}
             <div>
               <div className="font-semibold">Полив</div>
               <p className="text-sm whitespace-pre-line">{result.watering_schedule}</p>
