@@ -1,103 +1,126 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+
+type Result = {
+  flower_name: string;
+  watering_schedule: string;
+  care_recommendations: string[];
+  health_assessment: string;
+  confidence?: number;
+  issues?: string[];
+  tips?: string[];
+  sources?: string[];
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch("/api/analyze", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      setResult(data.result as Result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen p-6 sm:p-10">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Анализ цветка по фото</h1>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="block w-full border rounded p-2"
+          />
+          <button
+            type="submit"
+            disabled={!file || loading}
+            className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            {loading ? "Анализ..." : "Загрузить и проанализировать"}
+          </button>
+        </form>
+
+        {error && (
+          <div className="text-red-600 text-sm">Ошибка: {error}</div>
+        )}
+
+        {result && (
+          <div className="space-y-4 border rounded p-4">
+            <div className="text-lg font-medium">{result.flower_name}</div>
+            <div>
+              <div className="font-semibold">Полив</div>
+              <p className="text-sm whitespace-pre-line">{result.watering_schedule}</p>
+            </div>
+            <div>
+              <div className="font-semibold">Состояние</div>
+              <p className="text-sm whitespace-pre-line">{result.health_assessment}</p>
+            </div>
+            {!!result.care_recommendations?.length && (
+              <div>
+                <div className="font-semibold">Рекомендации по уходу</div>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {result.care_recommendations.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!!result.issues?.length && (
+              <div>
+                <div className="font-semibold">Проблемы</div>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {result.issues!.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!!result.tips?.length && (
+              <div>
+                <div className="font-semibold">Советы</div>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {result.tips!.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!!result.sources?.length && (
+              <div>
+                <div className="font-semibold">Источники</div>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {result.sources!.map((t, i) => (
+                    <li key={i}>
+                      <a className="underline" href={t} target="_blank" rel="noreferrer">
+                        {t}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
