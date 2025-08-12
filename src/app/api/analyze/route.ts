@@ -36,24 +36,24 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENAI_API_KEY, // TODO: Add to .env
     });
 
-    const prompt = `You are a professional botanist assistant. Analyze the provided flower photo and return ONLY a compact JSON object with the following keys:
+    const prompt = `Ты — профессиональный ботаник‑ассистент. Проанализируй фото цветка и верни ТОЛЬКО компактный JSON с ключами (ключи на английском, значения строго на русском):
 {
-  "flower_name": string, // common name, plus latin in parentheses if known
-  "watering_schedule": string, // concise schedule with frequency and volume tips
-  "care_recommendations": string[], // actionable bullet tips
-  "health_assessment": string, // short assessment of current health from the photo
-  "confidence": number, // 0..1 confidence in identification
-  "issues": string[], // potential problems seen (e.g., overwatering, pests)
-  "tips": string[], // short extra tips
-  "sources": string[] // 1-3 reputable links for further reading
+  "flower_name": string, // распространённое русское название и, по возможности, латинское в скобках
+  "watering_schedule": string, // как и как часто поливать, кратко и по делу
+  "care_recommendations": string[], // 3–7 практичных советов по уходу
+  "health_assessment": string, // краткая оценка состояния по фото
+  "confidence": number, // 0..1 уверенность в определении
+  "issues": string[], // возможные проблемы (переувлажнение, вредители и т.п.)
+  "tips": string[], // короткие дополнительные советы
+  "sources": string[] // 1–3 надёжные ссылки для чтения
 }
-Keep it realistic. If identification is uncertain, say so and provide 2-3 likely candidates.`;
+Все текстовые значения — на русском языке. Если точность низкая, так и напиши в поле health_assessment и упомяни 2–3 возможных варианта в поле flower_name.`;
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: "Return only valid JSON. No markdown." },
+        { role: "system", content: "Отвечай только валидным JSON без форматирования Markdown. Язык ответов — русский. Не добавляй никакого лишнего текста вне JSON." },
         {
           role: "user",
           content: [
@@ -72,7 +72,7 @@ Keep it realistic. If identification is uncertain, say so and provide 2-3 likely
       data = JSON.parse(content);
     } catch {
       return Response.json(
-        { error: "Model did not return valid JSON", raw: content },
+        { error: "Модель вернула невалидный JSON", raw: content },
         { status: 502 },
       );
     }
@@ -80,7 +80,7 @@ Keep it realistic. If identification is uncertain, say so and provide 2-3 likely
     const parsed = AnalysisSchema.safeParse(data);
     if (!parsed.success) {
       return Response.json(
-        { error: "Response schema validation failed", issues: parsed.error.format() },
+        { error: "Ответ модели не прошёл валидацию схемы", issues: parsed.error.format() },
         { status: 502 },
       );
     }
@@ -90,7 +90,7 @@ Keep it realistic. If identification is uncertain, say so and provide 2-3 likely
   } catch (error) {
     console.error(error);
     return Response.json(
-      { error: "Unexpected server error" },
+      { error: "Неожиданная ошибка сервера" },
       { status: 500 },
     );
   }
